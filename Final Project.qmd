@@ -126,18 +126,36 @@ library(shiny)
 library(plotly)
 
 ui <- fluidPage(
+  tags$head(
+    tags$style(HTML("
+      .container-fluid {
+        text-align: center;
+      }
+      .sidebar, .main-panel {
+        float: none;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 100000px;
+      }
+      .sidebar .panel-body, .main-panel .panel-body {
+        text-align: left; /* Keep text left-aligned within panels */
+      }
+      #myPlot {
+        margin-top: 5px; /* Adjust this value to move the plot down */
+      }
+    "))
+  ),
   titlePanel("Transfer Fee Performances Across Top 5 Leagues"),
   sidebarLayout(
     sidebarPanel(
-      selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1"))), 
-    sidebarPanel(
+      selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1")),
       radioButtons("position", "Select Position", choices = c("Attackers", "Midfielders"))
-    )),
-  mainPanel(
-    plotlyOutput("myPlot")
+    ),
+    mainPanel(
+      plotlyOutput("myPlot")
+    )
   )
 )
-
 
 server <- function(input, output) {
   output$myPlot <- renderPlotly({
@@ -146,22 +164,22 @@ server <- function(input, output) {
       "Premier League" = switch(
         input$position,
         "Attackers" = complete_prem_attackers,
-        "Midfielders" = complete_prem_attackers
+        "Midfielders" = complete_prem_midfielders
       ),
       "La Liga" = switch(
         input$position,
         "Attackers" = complete_la_liga_attackers,
-        "Midfielders" = complete_la_liga_attackers
+        "Midfielders" = complete_la_liga_midfielders
       ),
       "Bundesliga" = switch(
         input$position,
         "Attackers" = complete_bundesliga_attackers,
-        "Midfielders" = complete_bundesliga_attackers
+        "Midfielders" = complete_bundesliga_midfielders
       ),
       "Serie A" = switch(
         input$position,
         "Attackers" = complete_serie_a_attackers,
-        "Midfielders" = complete_serie_a_attackers
+        "Midfielders" = complete_serie_a_midfielders
       ),
       "Ligue 1" = switch(
         input$position,
@@ -169,23 +187,33 @@ server <- function(input, output) {
         "Midfielders" = complete_ligue_un_midfielders
       )
     )
-    
 
-    plot_ly(data = league_data, x= ~transfer_fee, y= ~GA_minus_xGA, color = ~LastName, text= ~team_name, type= "scatter", mode = "markers", marker = list(size = 10, symbol = "circle"))|>
+    y_axis_col <- if(input$position == "Midfielders") {
+      ~Pass_to_SCA
+    } else {
+      ~GA_minus_xGA
+    }
+    
+    subtitle_text <- if(input$position == "Midfielders") "Number of Pass to Shot Creating Chances " else "Goals Minus Expected Goals"
+
+    plot_ly(data = league_data, x = ~transfer_fee, y = y_axis_col, color = ~LastName, text = ~team_name, type = "scatter", mode = "markers", marker = list(size = 10, symbol = "circle")) |>
       layout(
-        title = paste(input$position, input$league),
+        title = paste("<b>", input$position, input$league, "</b><br><sub>", subtitle_text, "</sub>"),
+        titlefont = list(size = 18),
         xaxis = list(title = "Transfer Fee"),
-        yaxis = list(title = "GA_minus_xGA"),
+        yaxis = list(title = ""),
         legend = list(
           x = 0.2, y = 1.05,
           traceorder = "normal",
           orientation = "h",
           bgcolor = "rgba(255, 255, 255, 0.0)"
         ),
-        showlegend = FALSE
+        showlegend = FALSE,
+        margin = list(t = 100) # Increase top margin to push the plot down
       )
   })
 }
+
 shinyApp(ui, server)
 
 ```
