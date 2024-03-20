@@ -162,6 +162,167 @@ complete_ligue_un_midfielders <- join_mid_players_market(ligue_un_incoming_playe
 ```
 
 ```{r}
+---
+title: "Final Project"
+author: "Rajvir Vyas, Yashwant Sathish Kumar, Akhil Elamanchili"
+theme: superhero
+format: html
+editor: visual
+---
+
+## Final Project
+
+```{r}
+#install.packages("devtools")
+#devtools::install_github("JaseZiv/worldfootballR")
+```
+
+```{r}
+library(tidyverse)
+library(worldfootballR)
+```
+
+```{r}
+current_season_standard <- load_fb_big5_advanced_season_stats(season_end_year = 2024, stat_type = "standard", team_or_player = "player")
+current_season_chances <- load_fb_big5_advanced_season_stats(season_end_year = 2024, stat_type = "gca", team_or_player = "player")
+current_season_chances <- current_season_chances |>
+  mutate(Pass_to_SCA = PassLive_GCA + PassDead_GCA)
+```
+
+
+```{r}
+filter_mid_by_league_position <- function(comp, position){
+  current_season_chances |>
+    filter(Comp == comp, str_detect(Pos, position)) |>
+    filter(Pass_to_SCA > 0) |>
+    arrange(desc(Pass_to_SCA))
+}
+
+premier_league_midfielders <- filter_mid_by_league_position("Premier League", "MF")
+premier_league_midfielders$LastName <- sub(".*\\s", "", premier_league_midfielders$Player)
+
+la_liga_midfielders <- filter_mid_by_league_position("La Liga", "MF")
+la_liga_midfielders$LastName <- sub(".*\\s", "", la_liga_midfielders$Player)
+
+bundesliga_midfielders <- filter_mid_by_league_position("Bundesliga", "MF")
+bundesliga_midfielders$LastName <- sub(".*\\s", "", bundesliga_midfielders$Player)
+
+serie_a_midfielders <- filter_mid_by_league_position("Serie A", "MF")
+serie_a_midfielders$LastName <- sub(".*\\s", "", serie_a_midfielders$Player)
+
+ligue_un_midfielders <- filter_mid_by_league_position("Ligue 1", "MF")
+ligue_un_midfielders$LastName <- sub(".*\\s", "", ligue_un_midfielders$Player)
+```
+
+```{r}
+filter_att_by_league_position <- function(comp, position){
+  current_season_standard |>
+    filter(Comp == comp, str_detect(Pos, position)) |>
+    filter(Gls > 0)|>
+    arrange(desc(Gls))
+}
+premier_league_attackers <- filter_att_by_league_position("Premier League", "FW")
+premier_league_attackers$LastName <- sub(".*\\s", "", premier_league_attackers$Player)
+
+la_liga_attackers <- filter_att_by_league_position("La Liga", "FW")
+la_liga_attackers$LastName <- sub(".*\\s", "", la_liga_attackers$Player)
+
+bundesliga_attackers <- filter_att_by_league_position("Bundesliga", "FW")
+bundesliga_attackers$LastName <- sub(".*\\s", "", bundesliga_attackers$Player)
+
+serie_a_attackers <- filter_att_by_league_position("Serie A", "FW")
+serie_a_attackers$LastName <- sub(".*\\s", "", serie_a_attackers$Player)
+
+ligue_un_attackers <- filter_att_by_league_position("Ligue 1", "FW")
+ligue_un_attackers$LastName <- sub(".*\\s", "", ligue_un_attackers$Player)
+
+```
+
+
+```{r}
+prem_urls <- tm_league_team_urls("England", 2023, league_url = NA)
+print(prem_urls)
+```
+
+```{r}
+get_country_transfers <- function(country) {
+    # Fetch team URLs for the specified country and year
+    team_urls <- tm_league_team_urls(country, 2023, league_url = NA)
+    
+    # Initialize a list to store transfer data for all teams
+    all_transfers <- list()
+    
+    # Iterate over team URLs and fetch transfer data
+    for (team_url in team_urls) {
+        team_transfers <- tm_team_transfers(team_url, transfer_window = "all")
+        all_transfers <- c(all_transfers, list(team_transfers))
+    }
+    
+    # Combine transfer data into a single dataframe
+    combined_transfers <- do.call(rbind, all_transfers)
+
+    
+    
+    return(combined_transfers)
+}
+prem_transfers <- get_country_transfers("England")
+
+```
+
+```{r}
+la_liga_transfers <- get_country_transfers("Spain")
+```
+
+```{r}
+bundesliga_transfers <-get_country_transfers("Germany")
+serie_a_transfers <- get_country_transfers("Italy")
+ligue_un_transfers <- get_country_transfers("France")
+  #if club2 had U21 or Teamname 'B' in it, then set transfer_fee to 0
+```
+
+```{r}
+filter_by_league_transfers <- function(league_transfer){
+    league_transfer|>
+      filter(transfer_type == "Arrivals")|>
+      filter(is_loan == FALSE)|>
+      filter(appearances >= 1)
+}
+prem_incoming_players <- filter_by_league_transfers(prem_transfers)
+la_liga_incoming_players <- filter_by_league_transfers(la_liga_transfers)
+bundesliga_incoming_players <- filter_by_league_transfers(bundesliga_transfers)
+serie_a_incoming_players <- filter_by_league_transfers(serie_a_transfers)
+ligue_un_incoming_players <- filter_by_league_transfers(ligue_un_transfers)
+
+```
+
+```{r}
+join_att_players_market <- function(incoming_player, positional_player){
+  incoming_player|>
+    inner_join(positional_player, by =c("player_name" = "Player"))|>
+    mutate(GA_minus_xGA = (`G+A`) - (`npxG+xAG_Expected`))
+}
+complete_prem_attackers <- join_att_players_market(prem_incoming_players, premier_league_attackers)
+complete_la_liga_attackers <- join_att_players_market(la_liga_incoming_players, la_liga_attackers)
+complete_bundesliga_attackers <- join_att_players_market(bundesliga_incoming_players, bundesliga_attackers)
+complete_serie_a_attackers <- join_att_players_market(serie_a_incoming_players, serie_a_attackers)
+complete_ligue_un_attackers <- join_att_players_market(ligue_un_incoming_players, ligue_un_attackers)
+
+```
+
+```{r}
+join_mid_players_market <- function(incoming_player, positional_player){
+  incoming_player|>
+    inner_join(positional_player, by =c("player_name" = "Player"))
+}
+complete_prem_midfielders <- join_mid_players_market(prem_incoming_players, premier_league_midfielders)
+complete_la_liga_midfielders <- join_mid_players_market(la_liga_incoming_players, la_liga_midfielders)
+complete_bundesliga_midfielders <- join_mid_players_market(bundesliga_incoming_players, bundesliga_midfielders)
+complete_serie_a_midfielders <- join_mid_players_market(serie_a_incoming_players, serie_a_midfielders)
+complete_ligue_un_midfielders <- join_mid_players_market(ligue_un_incoming_players, ligue_un_midfielders)
+```
+
+
+```{r}
 library(shiny)
 library(plotly)
 
@@ -329,3 +490,6 @@ server2 <- function(input, output) {
 }
 shinyApp(ui,server2)
 ```
+
+
+
