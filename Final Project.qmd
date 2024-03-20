@@ -329,33 +329,33 @@ library(plotly)
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("
+        html, body, .container-fluid {
+        height: 100%;
+      }
       .container-fluid {
         text-align: center;
-      }
-      .sidebar, .main-panel {
-        float: none;
-        margin-left: auto;
-        margin-right: auto;
-        margin-top: 100000px;
-      }
-      .sidebar .panel-body, .main-panel .panel-body {
-        text-align: left; /* Keep text left-aligned within panels */
+        background-image: url('https://xmple.com/wallpaper/yellow-gradient-red-linear-3840x2160-c2-feeb10-fe4010-a-240-f-14.svg'); /* Path to your background image */
+        background-size: cover; /* Fit the image fully within the window while maintaining aspect ratio */
+        background-position: center;
+        background-repeat: no-repeat; 
       }
       #myPlot {
-        margin-top: 5px; /* Adjust this value to move the plot down */
+        display: flex;
+        justify-content: center;
       }
     "))
   ),
   titlePanel("Transfer Fee Performances Across Top 5 Leagues"),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1")),
-      radioButtons("position", "Select Position", choices = c("Attackers", "Midfielders"))
-    ),
-    mainPanel(
-      plotlyOutput("myPlot")
-    )
+  mainPanel(
+    plotlyOutput("myPlot"),
+    fluidRow(
+      column(6, textInput("teamName", "Enter Team Name", value = "")),
+      column(6, selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1"))),
+      column(6, align = "center", sliderInput("ageRange", "Select Age Range", min = 18, max = 40, value = c(18, 40)), align= "center"),
+      column(6, align = "center",radioButtons("position", "Select Position", choices = c("Attackers", "Midfielders")), align = "left")
+    
   )
+)
 )
 
 server <- function(input, output) {
@@ -388,21 +388,29 @@ server <- function(input, output) {
         "Midfielders" = complete_ligue_un_midfielders
       )
     )
-
-    y_axis_col <- if(input$position == "Midfielders") {
-      ~Pass_to_SCA
-    } else {
-      ~GA_minus_xGA
-    }
     
-    subtitle_text <- if(input$position == "Midfielders") "Number of Pass to Shot Creating Chances " else "Goals Minus Expected Goals"
+    # Filter dataset based on selected age range
+    filtered_data <- subset(league_data, Age >= input$ageRange[1] & Age <= input$ageRange[2])
+    
+    # Filter dataset based on entered team name
+    if (input$teamName != "") {
+      filtered_data <- filtered_data[grepl(tolower(input$teamName), tolower(filtered_data$team_name)), ]
+    }
 
-    plot_ly(data = league_data, x = ~transfer_fee, y = y_axis_col, color = ~LastName, text = ~team_name, type = "scatter", mode = "markers", marker = list(size = 10, symbol = "circle")) |>
+    if (input$position == "Midfielders") {
+      y_axis_col <- ~Pass_to_SCA
+      subtitle_text <- "Number of Pass to Shot Creating Chances"
+    } else {
+      y_axis_col <- ~GA_minus_xGA
+      subtitle_text <- "Goals Minus Expected Goals"
+    }
+
+    plot_ly(data = filtered_data, x = ~transfer_fee, y = y_axis_col, color = ~LastName, text = ~team_name, type = "scatter", mode = "markers", marker = list(size = 10, symbol = "circle")) |>
       layout(
         title = paste("<b>", input$position, input$league, "</b><br><sub>", subtitle_text, "</sub>"),
         titlefont = list(size = 18),
         xaxis = list(title = "Transfer Fee"),
-        yaxis = list(title = ""),
+        yaxis = list(title = if(input$position == "Midfielders") "Pass to Shot Creating Chances" else "Goals Minus Expected Goals"),
         legend = list(
           x = 0.2, y = 1.05,
           traceorder = "normal",
@@ -410,86 +418,17 @@ server <- function(input, output) {
           bgcolor = "rgba(255, 255, 255, 0.0)"
         ),
         showlegend = FALSE,
-        margin = list(t = 100) # Increase top margin to push the plot down
+        margin = list(t = 100, l=80) # Increase top margin to push the plot down
       )
   })
 }
 
 shinyApp(ui, server)
 
+
 ```
 
-```{r}
-ui <- fluidPage(
-  titlePanel("Attackers Shooting 23-24 Across Top 5 Leagues"),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1"))), 
-    sidebarPanel(
-      selectInput("position", "Select Position", choices = c("Attackers", "Midfielders", "Defenders", "Goalkeepers"))
-    )),
-    mainPanel(
-      plotlyOutput("myPlot")
-    )
-  )
-server2 <- function(input, output) {
-  output$myPlot <- renderPlotly({
-    league_data <- switch(
-      input$league,
-      "Premier League" = complete_prem_attackers,
-      "La Liga" = complete_la_liga_attackers,
-      "Bundesliga" = complete_bundesliga_attackers,
-      "Serie A" = complete_serie_a_attackers,
-      "Ligue 1" = complete_ligue_un_attackers
-    )
-     if (input$position == "Midfielders") {
-      # Create a different visualization for midfielders
-      # Replace this code with the desired visualization for midfielders
-      plot_ly(data = league_data, 
-              x = ~pass_completion_rate, 
-              y = ~successful_dribbles, 
-              color = ~LastName,
-              type = "scatter", 
-              mode = "markers",
-              marker = list(size = 10, symbol = "circle")) %>%
-        layout(
-          title = paste("Midfielders Visualization -", input$league),
-          xaxis = list(title = "Pass Completion Rate"),
-          yaxis = list(title = "Successful Dribbles"),
-          legend = list(
-            x = 0.2, y = 1.05,
-            traceorder = "normal",
-            orientation = "h",
-            bgcolor = "rgba(255, 255, 255, 0.0)"
-          ),
-          showlegend = FALSE
-        )
-    } else {
-      # Visualization for other positions (e.g., attackers)
-      plot_ly(data = league_data, 
-              x = ~transfer_fee, 
-              y = ~G_minus_xG_Expected, 
-              color = ~LastName,
-              type = "scatter", 
-              mode = "markers",
-              marker = list(size = 10, symbol = "circle")) %>%
-        layout(
-          title = paste("Attackers Visualization -", input$league),
-          xaxis = list(title = "Transfer Fee"),
-          yaxis = list(title = "G_minus_xG_Expected"),
-          legend = list(
-            x = 0.2, y = 1.05,
-            traceorder = "normal",
-            orientation = "h",
-            bgcolor = "rgba(255, 255, 255, 0.0)"
-          ),
-          showlegend = FALSE
-        )
-    }
-  })
-}
-shinyApp(ui,server2)
-```
+
 
 
 
