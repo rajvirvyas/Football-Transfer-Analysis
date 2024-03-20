@@ -1,6 +1,6 @@
 ---
 title: "Final Project"
-author: "Rajvir Vyas, Yashwant Sathish Kumar, Akhil Elaminchili"
+author: "Rajvir Vyas, Yashwant Sathish Kumar, Akhil Elamanchili"
 theme: superhero
 format: html
 editor: visual
@@ -131,28 +131,49 @@ ui <- fluidPage(
     sidebarPanel(
       selectInput("league", "Select League", choices = c("Premier League", "La Liga", "Bundesliga", "Serie A", "Ligue 1"))), 
     sidebarPanel(
-      selectInput("position", "Select Position", choices = c("Attackers", "Midfielders", "Defenders", "Goalkeepers"))
+      radioButtons("position", "Select Position", choices = c("Attackers", "Midfielders"))
     )),
-    mainPanel(
-      plotlyOutput("myPlot")
-    )
+  mainPanel(
+    plotlyOutput("myPlot")
   )
+)
 
 
 server <- function(input, output) {
   output$myPlot <- renderPlotly({
     league_data <- switch(
       input$league,
-      "Premier League" = complete_prem_attackers,
-      "La Liga" = complete_la_liga_attackers,
-      "Bundesliga" = complete_bundesliga_attackers,
-      "Serie A" = complete_serie_a_attackers,
-      "Ligue 1" = complete_ligue_un_attackers
+      "Premier League" = switch(
+        input$position,
+        "Attackers" = complete_prem_attackers,
+        "Midfielders" = complete_prem_attackers
+      ),
+      "La Liga" = switch(
+        input$position,
+        "Attackers" = complete_la_liga_attackers,
+        "Midfielders" = complete_la_liga_attackers
+      ),
+      "Bundesliga" = switch(
+        input$position,
+        "Attackers" = complete_bundesliga_attackers,
+        "Midfielders" = complete_bundesliga_attackers
+      ),
+      "Serie A" = switch(
+        input$position,
+        "Attackers" = complete_serie_a_attackers,
+        "Midfielders" = complete_serie_a_attackers
+      ),
+      "Ligue 1" = switch(
+        input$position,
+        "Attackers" = complete_ligue_un_attackers,
+        "Midfielders" = complete_ligue_un_midfielders
+      )
     )
+    
 
     plot_ly(data = league_data, x= ~transfer_fee, y= ~GA_minus_xGA, color = ~LastName, text= ~team_name, type= "scatter", mode = "markers", marker = list(size = 10, symbol = "circle"))|>
       layout(
-        title = paste("Attackers", input$league),
+        title = paste(input$position, input$league),
         xaxis = list(title = "Transfer Fee"),
         yaxis = list(title = "GA_minus_xGA"),
         legend = list(
@@ -165,7 +186,6 @@ server <- function(input, output) {
       )
   })
 }
-
 shinyApp(ui, server)
 
 ```
