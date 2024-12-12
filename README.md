@@ -5,11 +5,11 @@
 <!---Demo (click image for YouTube video): [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/i__IyjH_8pw/maxresdefault.jpg)](https://www.youtube.com/watch?v=i__IyjH_8pw)-->
 
 Developed By:
-Rajvir Vyas (Team leader)
-Yashwant Sathishkumar
-Akhil Elamanchili
+-  Rajvir Vyas (Team leader)
+-  Yashwant Sathishkumar
+-  Akhil Elamanchili
 
-Run Instructions/Notes:
+## Run Instructions/Notes:
 
 - Make sure worldfootballR is installed (install.packages(worldFootballR)) which may take a minute to install 
 - Run each code block in order
